@@ -2,7 +2,8 @@ import time
 from diffusers import StableDiffusionPipeline
 
 prompt = "sailing ship in storm by Rembrandt"
-model_id = "runwayml/stable-diffusion-v1-5"
+# model_id = "runwayml/stable-diffusion-v1-5"
+model_id = "/home/heyuan/.cache/huggingface/diffusers/models--runwayml--stable-diffusion-v1-5/snapshots/aa9ba505e1973ae5cd05f5aedd345178f52f8e6a/"
 nb_pass = 10
 
 # build a StableDiffusionPipeline with the default float32 data type
