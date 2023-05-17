@@ -14,6 +14,8 @@ cd stable-diffusion/
 conda env create -f environment.yaml
 conda activate ldm
 
+pip install accelerate
+
 curl https://f004.backblazeb2.com/file/aai-blog-files/sd-v1-4.ckpt > sd-v1-4.ckpt
 
 mkdir -p models/ldm/stable-diffusion-v1/
