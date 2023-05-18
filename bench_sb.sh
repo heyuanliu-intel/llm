@@ -1,4 +1,6 @@
 #!/bin/bash
+eval "$(conda shell.bash hook)"
+conda activate sb
 
 # Returns the count of arguments that are in short or long options
 VALID_ARGUMENTS=$# 

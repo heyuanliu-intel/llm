@@ -20,16 +20,18 @@ def elapsed_time(pipeline, nb_pass=10, num_inference_steps=20):
 
 
 def bench_float32():
+    print("benchmark standard pipeline with float32")
     # build a StableDiffusionPipeline with the default float32 data type
     pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
     # warmup
     images = pipe(prompt, num_inference_steps=10).images
     # benchmarking
     latency = elapsed_time(pipe, nb_pass=nb_pass)
-    print(f"benchmark standard pipeline with float32 and latency is {latency}")
+    print(f"latency is {latency}")
 
 
 def bench_ipex_bf16():
+    print("benchmark standard pipeline with ipex and bf16")
     pipe = StableDiffusionPipeline.from_pretrained(model_id)
     # to channels last
     pipe.unet = pipe.unet.to(memory_format=torch.channels_last)
@@ -50,12 +52,24 @@ def bench_ipex_bf16():
 
     with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe, nb_pass=nb_pass)
-        print(f"benchmark standard pipeline with ipex and bf16 and latency is {latency}")
+        print(f"latency is {latency}")
+
+
+def bench_ov_bf16():
+    print("benchmark standard pipeline with openvino and bf16")
+    pipe = OVStableDiffusionPipeline.from_pretrained(model_id, export=True)
+    # warmup
+    images = pipe(prompt, num_inference_steps=10).images
+    # time_ov_model_bf16 = elapsed_time(pipe)
+    pipe.reshape(batch_size=1, height=512, width=512, num_images_per_prompt=1)
+    images = pipe(prompt, num_inference_steps=10).images
+    latency = elapsed_time(pipe)
+    print(f"latency is {latency}")
 
 
 parser = argparse.ArgumentParser(description='Optional app description')
-parser.add_argument('--baseline', action='store_true', help='A boolean switch')
-parser.add_argument('--ipex', action='store_true', help='A boolean switch')
+parser.add_argument('--baseline', action='store_true', help='baseline benchmarking')
+parser.add_argument('--ipex', action='store_true', help='benchmarking with ipex')
 args = parser.parse_args()
 
 if args.baseline:
