@@ -70,6 +70,24 @@ def bench_ipex_bf16():
         print(f"latency is {latency}")
 
 
+def bench_ipex_custom_fp32():
+    print("benchmark standard pipeline with ipex fp32 and customized pipeline")
+    pipe = StableDiffusionPipeline.from_pretrained(model_id, custom_pipeline="stable_diffusion_ipex")
+    pipe.prepare_for_ipex(prompt, infer_type='fp32')
+    with torch.no_grad():
+        latency = elapsed_time(pipe)
+        print(f"latency is {latency}")
+
+
+def bench_ipex_custom_bf16():
+    print("benchmark standard pipeline with ipex bf16 and customized pipeline")
+    pipe = StableDiffusionPipeline.from_pretrained(model_id, custom_pipeline="stable_diffusion_ipex")
+    pipe.prepare_for_ipex(prompt, infer_type='bf16')
+    with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
+        latency = elapsed_time(pipe)
+        print(f"latency is {latency}")
+
+
 def bench_ov_bf16():
     print("benchmark standard pipeline with openvino and bf16")
     pipe = OVStableDiffusionPipeline.from_pretrained(model_id, export=True)
@@ -87,6 +105,8 @@ parser = argparse.ArgumentParser(description='Optional app description')
 parser.add_argument('--base_fp32', action='store_true', help='baseline with FP32 benchmarking')
 parser.add_argument('--base_bf16', action='store_true', help='baseline with BF16 benchmarking')
 parser.add_argument('--ipex_bf16', action='store_true', help='benchmarking with ipex and bf16')
+parser.add_argument('--ipex_custom_fp32', action='store_true', help='benchmarking with ipex and fp32')
+parser.add_argument('--ipex_custom_bf16', action='store_true', help='benchmarking with ipex and bf16')
 parser.add_argument('--ov_bf16', action='store_true', help='benchmarking with openvino and bf16')
 args = parser.parse_args()
 
@@ -96,6 +116,10 @@ elif args.base_bf16:
     bench_bf16()
 elif args.ipex_bf16:
     bench_ipex_bf16()
+elif args.ipex_custom_fp32:
+    bench_ipex_custom_fp32()
+elif args.ipex_custom_bf16:
+    bench_ipex_custom_bf16()
 elif args.ov_bf16:
     bench_ov_bf16()
 else:
