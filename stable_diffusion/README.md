@@ -1,6 +1,6 @@
 # Accelerating Stable Diffusion Inference on Intel CPUs
 
-### How to setup benchmarking environment for Baseline Benchmarking and IPEX
+### How to setup benchmarking environment for Baseline Benchmarking and IPEX (Torch 1.13.1)
 
 ```
 conda create --name sb python=3.8.13 -y
@@ -13,13 +13,14 @@ cd ~/llm
 ./benchmark_sb.sh
 ```
 
-### How to setup benchmarking environment for OpenVINO
+### How to setup benchmarking environment for OpenVINO (Torch 2.0)
 
 ```
 conda create --name sb_ov python=3.8.13 -y
 conda activate sb_ov
 
 pip install optimum[openvino]
+pip install argparse transformers diffusers accelerate intel_extension_for_pytorch
 cd ~/llm
 ./bench_sb_ov.sh
 ```

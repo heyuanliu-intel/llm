@@ -1,8 +1,8 @@
 import time
-import argparse
-import intel_extension_for_pytorch as ipex
 import torch
+import argparse
 from diffusers import StableDiffusionPipeline
+from optimum.intel.openvino import OVStableDiffusionPipeline
 
 # model_id = "runwayml/stable-diffusion-v1-5"
 # Use cached folder to avoid download the models from network
@@ -23,11 +23,25 @@ def bench_float32():
     print("benchmark standard pipeline with float32")
     # build a StableDiffusionPipeline with the default float32 data type
     pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
-    # warmup
-    images = pipe(prompt, num_inference_steps=10).images
-    # benchmarking
-    latency = elapsed_time(pipe, nb_pass=nb_pass)
-    print(f"latency is {latency}")
+    with torch.no_grad():
+        # warmup
+        images = pipe(prompt, num_inference_steps=10).images
+        # benchmarking
+        latency = elapsed_time(pipe, nb_pass=nb_pass)
+        print(f"latency is {latency}")
+
+
+def bench_bf16():
+    print("benchmark standard pipeline with bf16")
+    # build a StableDiffusionPipeline with the default float32 data type
+    pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
+
+    with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
+        # warmup
+        images = pipe(prompt, num_inference_steps=10).images
+        # benchmarking
+        latency = elapsed_time(pipe, nb_pass=nb_pass)
+        print(f"latency is {latency}")
 
 
 def bench_ipex_bf16():
@@ -50,20 +64,41 @@ def bench_ipex_bf16():
     pipe.text_encoder = ipex.optimize(pipe.text_encoder.eval(), dtype=torch.bfloat16, inplace=True)
     pipe.safety_checker = ipex.optimize(pipe.safety_checker.eval(), dtype=torch.bfloat16, inplace=True)
 
-    with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
+    with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe, nb_pass=nb_pass)
         print(f"latency is {latency}")
 
 
+def bench_ov_bf16():
+    print("benchmark standard pipeline with openvino and bf16")
+    pipe = OVStableDiffusionPipeline.from_pretrained(model_id, export=True)
+    # warmup
+    images = pipe(prompt, num_inference_steps=10).images
+    # time_ov_model_bf16 = elapsed_time(pipe)
+    pipe.reshape(batch_size=1, height=512, width=512, num_images_per_prompt=1)
+    with torch.no_grad():
+        images = pipe(prompt, num_inference_steps=10).images
+        latency = elapsed_time(pipe)
+        print(f"latency is {latency}")
+
+
 parser = argparse.ArgumentParser(description='Optional app description')
-parser.add_argument('--baseline', action='store_true', help='baseline benchmarking')
-parser.add_argument('--ipex', action='store_true', help='benchmarking with ipex')
+parser.add_argument('--base_fp32', action='store_true', help='baseline with FP32 benchmarking')
+parser.add_argument('--base_bf16', action='store_true', help='baseline with BF16 benchmarking')
+parser.add_argument('--ipex_bf16', action='store_true', help='benchmarking with ipex and bf16')
+parser.add_argument('--ov_bf16', action='store_true', help='benchmarking with openvino and bf16')
 args = parser.parse_args()
 
-if args.baseline:
+if args.base_fp32:
     bench_float32()
+elif args.base_bf16:
+    bench_bf16()
 elif args.ipex:
     bench_ipex_bf16()
+elif args.ov_bf16:
+    bench_ov_bf16()
 else:
     bench_float32()
+    bench_bf16()
     bench_ipex_bf16()
+    bench_ov_bf16()
