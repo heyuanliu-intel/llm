@@ -1,4 +1,5 @@
 import time
+import intel_extension_for_pytorch as ipex
 import torch
 import argparse
 from diffusers import StableDiffusionPipeline
@@ -93,7 +94,7 @@ if args.base_fp32:
     bench_float32()
 elif args.base_bf16:
     bench_bf16()
-elif args.ipex:
+elif args.ipex_bf16:
     bench_ipex_bf16()
 elif args.ov_bf16:
     bench_ov_bf16()

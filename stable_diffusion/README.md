@@ -24,3 +24,10 @@ pip install argparse transformers diffusers accelerate intel_extension_for_pytor
 cd ~/llm
 ./bench_sb_ov.sh
 ```
+
+### Disable HT
+
+```
+echo off | sudo tee /sys/devices/system/cpu/smt/control
+
+```
