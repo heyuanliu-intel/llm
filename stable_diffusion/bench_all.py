@@ -12,7 +12,7 @@ model_id = "/home/heyuan/.cache/huggingface/diffusers/models--runwayml--stable-d
 prompt = "sailing ship in storm by Rembrandt"
 nb_pass = 10
 
-with_compile = True
+with_compile = False
 
 
 def compile_pipe(pipe):
@@ -50,7 +50,6 @@ def bench_bf16():
     print("benchmark standard pipeline with bf16")
     # build a StableDiffusionPipeline with the default float32 data type
     pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
-    pipe = compile_pipe(pipe)
 
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         # warmup
@@ -80,8 +79,6 @@ def bench_ipex_bf16():
     pipe.text_encoder = ipex.optimize(pipe.text_encoder.eval(), dtype=torch.bfloat16, inplace=True)
     pipe.safety_checker = ipex.optimize(pipe.safety_checker.eval(), dtype=torch.bfloat16, inplace=True)
 
-    pipe = compile_pipe(pipe)
-
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe, nb_pass=nb_pass)
         print(f"latency is {latency}")
@@ -109,8 +106,6 @@ def bench_ipex_scheduler_bf16():
     pipe.text_encoder = ipex.optimize(pipe.text_encoder.eval(), dtype=torch.bfloat16, inplace=True)
     pipe.safety_checker = ipex.optimize(pipe.safety_checker.eval(), dtype=torch.bfloat16, inplace=True)
 
-    pipe = compile_pipe(pipe)
-
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe, nb_pass=nb_pass)
         print(f"latency is {latency}")
@@ -120,7 +115,6 @@ def bench_ipex_custom_fp32():
     print("benchmark standard pipeline with ipex fp32 and customized pipeline")
     pipe = StableDiffusionIPEXPipeline.from_pretrained(model_id)
     pipe.prepare_for_ipex(prompt, dtype=torch.float32, height=512, width=512)
-    pipe = compile_pipe(pipe)
 
     with torch.no_grad():
         latency = elapsed_time(pipe)
@@ -131,7 +125,6 @@ def bench_ipex_custom_bf16():
     print("benchmark standard pipeline with ipex bf16 and customized pipeline")
     pipe = StableDiffusionIPEXPipeline.from_pretrained(model_id)
     pipe.prepare_for_ipex(prompt, dtype=torch.bfloat16, height=512, width=512)
-    pipe = compile_pipe(pipe)
 
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe)
