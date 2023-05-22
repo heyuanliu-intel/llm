@@ -25,9 +25,11 @@ cd ~/llm
 ./bench_sb_ov.sh
 ```
 
-### Disable HT
+### System-level optimization
 
 ```
-echo off | sudo tee /sys/devices/system/cpu/smt/control
+yum-config-manager --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.repo
+yum install -y intel-mkl --nogpgcheck
+conda install -c conda-forge jemalloc
 
 ```
