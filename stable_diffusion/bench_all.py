@@ -12,6 +12,17 @@ model_id = "/home/heyuan/.cache/huggingface/diffusers/models--runwayml--stable-d
 prompt = "sailing ship in storm by Rembrandt"
 nb_pass = 10
 
+with_compile = True
+
+
+def compile_pipe(pipe):
+    if with_compile:
+        pipe.unet = pipe.unet.to(memory_format=torch.channels_last)
+        pipe.unet = torch.compile(pipe.unet, mode="reduce-overhead")
+        return pipe
+    else:
+        return pipe
+
 
 def elapsed_time(pipeline, nb_pass=10, num_inference_steps=20):
     start = time.time()
@@ -25,6 +36,8 @@ def bench_float32():
     print("benchmark standard pipeline with float32")
     # build a StableDiffusionPipeline with the default float32 data type
     pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
+    pipe = compile_pipe(pipe)
+
     with torch.no_grad():
         # warmup
         images = pipe(prompt, num_inference_steps=10).images
@@ -37,6 +50,7 @@ def bench_bf16():
     print("benchmark standard pipeline with bf16")
     # build a StableDiffusionPipeline with the default float32 data type
     pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
+    pipe = compile_pipe(pipe)
 
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         # warmup
@@ -66,9 +80,12 @@ def bench_ipex_bf16():
     pipe.text_encoder = ipex.optimize(pipe.text_encoder.eval(), dtype=torch.bfloat16, inplace=True)
     pipe.safety_checker = ipex.optimize(pipe.safety_checker.eval(), dtype=torch.bfloat16, inplace=True)
 
+    pipe = compile_pipe(pipe)
+
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe, nb_pass=nb_pass)
         print(f"latency is {latency}")
+
 
 def bench_ipex_scheduler_bf16():
     print("benchmark standard pipeline with ipex, bf16 and custom scheduler")
@@ -92,14 +109,19 @@ def bench_ipex_scheduler_bf16():
     pipe.text_encoder = ipex.optimize(pipe.text_encoder.eval(), dtype=torch.bfloat16, inplace=True)
     pipe.safety_checker = ipex.optimize(pipe.safety_checker.eval(), dtype=torch.bfloat16, inplace=True)
 
+    pipe = compile_pipe(pipe)
+
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe, nb_pass=nb_pass)
         print(f"latency is {latency}")
+
 
 def bench_ipex_custom_fp32():
     print("benchmark standard pipeline with ipex fp32 and customized pipeline")
     pipe = StableDiffusionIPEXPipeline.from_pretrained(model_id)
     pipe.prepare_for_ipex(prompt, dtype=torch.float32, height=512, width=512)
+    pipe = compile_pipe(pipe)
+
     with torch.no_grad():
         latency = elapsed_time(pipe)
         print(f"latency is {latency}")
@@ -109,6 +131,8 @@ def bench_ipex_custom_bf16():
     print("benchmark standard pipeline with ipex bf16 and customized pipeline")
     pipe = StableDiffusionIPEXPipeline.from_pretrained(model_id)
     pipe.prepare_for_ipex(prompt, dtype=torch.bfloat16, height=512, width=512)
+    pipe = compile_pipe(pipe)
+
     with torch.no_grad(), torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
         latency = elapsed_time(pipe)
         print(f"latency is {latency}")
