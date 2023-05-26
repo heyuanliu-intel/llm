@@ -8,7 +8,8 @@ from optimum.intel.openvino import OVStableDiffusionPipeline
 
 # model_id = "runwayml/stable-diffusion-v1-5"
 # Use cached folder to avoid download the models from network
-model_id = "/home/heyuan/.cache/huggingface/diffusers/models--runwayml--stable-diffusion-v1-5/snapshots/aa9ba505e1973ae5cd05f5aedd345178f52f8e6a/"
+# model_id = "runwayml/stable-diffusion-v1-5"
+model_id = "/root/.cache/huggingface/hub/models--runwayml--stable-diffusion-v1-5/snapshots/aa9ba505e1973ae5cd05f5aedd345178f52f8e6a/"
 prompt = "sailing ship in storm by Rembrandt"
 nb_pass = 10
 
@@ -17,8 +18,7 @@ with_compile = False
 
 def compile_pipe(pipe):
     if with_compile:
-        pipe.unet = pipe.unet.to(memory_format=torch.channels_last)
-        pipe.unet = torch.compile(pipe.unet, mode="reduce-overhead")
+        pipe.unet = torch.compile(pipe.unet)
         return pipe
     else:
         return pipe
@@ -33,7 +33,7 @@ def elapsed_time(pipeline, nb_pass=10, num_inference_steps=20):
 
 
 def bench_float32():
-    print("benchmark standard pipeline with float32")
+    # print("benchmark standard pipeline with float32")
     # build a StableDiffusionPipeline with the default float32 data type
     pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
     pipe = compile_pipe(pipe)
@@ -47,7 +47,7 @@ def bench_float32():
 
 
 def bench_bf16():
-    print("benchmark standard pipeline with bf16")
+    # print("benchmark standard pipeline with bf16")
     # build a StableDiffusionPipeline with the default float32 data type
     pipe = StableDiffusionPipeline.from_pretrained(model_id).to("cpu")
 
@@ -60,7 +60,7 @@ def bench_bf16():
 
 
 def bench_ipex_bf16():
-    print("benchmark standard pipeline with ipex and bf16")
+    # print("benchmark standard pipeline with ipex and bf16")
     pipe = StableDiffusionPipeline.from_pretrained(model_id)
     # to channels last
     pipe.unet = pipe.unet.to(memory_format=torch.channels_last)
@@ -85,7 +85,7 @@ def bench_ipex_bf16():
 
 
 def bench_ipex_scheduler_bf16():
-    print("benchmark standard pipeline with ipex, bf16 and custom scheduler")
+    # print("benchmark standard pipeline with ipex, bf16 and custom scheduler")
     dpm = DPMSolverMultistepScheduler.from_pretrained(model_id, subfolder="scheduler")
     pipe = StableDiffusionPipeline.from_pretrained(model_id, scheduler=dpm)
 
@@ -112,7 +112,7 @@ def bench_ipex_scheduler_bf16():
 
 
 def bench_ipex_custom_fp32():
-    print("benchmark standard pipeline with ipex fp32 and customized pipeline")
+    # print("benchmark standard pipeline with ipex fp32 and customized pipeline")
     pipe = StableDiffusionIPEXPipeline.from_pretrained(model_id)
     pipe.prepare_for_ipex(prompt, dtype=torch.float32, height=512, width=512)
 
@@ -122,7 +122,7 @@ def bench_ipex_custom_fp32():
 
 
 def bench_ipex_custom_bf16():
-    print("benchmark standard pipeline with ipex bf16 and customized pipeline")
+    # print("benchmark standard pipeline with ipex bf16 and customized pipeline")
     pipe = StableDiffusionIPEXPipeline.from_pretrained(model_id)
     pipe.prepare_for_ipex(prompt, dtype=torch.bfloat16, height=512, width=512)
 
@@ -132,7 +132,7 @@ def bench_ipex_custom_bf16():
 
 
 def bench_ov_bf16():
-    print("benchmark standard pipeline with openvino and bf16")
+    # print("benchmark standard pipeline with openvino and bf16")
     pipe = OVStableDiffusionPipeline.from_pretrained(model_id, export=True)
     # warmup
     images = pipe(prompt, num_inference_steps=10).images
@@ -168,11 +168,3 @@ elif args.ipex_custom_bf16:
     bench_ipex_custom_bf16()
 elif args.ov_bf16:
     bench_ov_bf16()
-else:
-    bench_float32()
-    bench_bf16()
-    bench_ipex_bf16()
-    bench_ipex_scheduler_bf16()
-    bench_ov_bf16()
-    bench_ipex_custom_fp32()
-    bench_ipex_custom_bf16()
