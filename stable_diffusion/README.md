@@ -25,7 +25,7 @@ cd llm
 ./bench_sb.sh
 ```
 
-### System-level optimization
+### System-level optimization on CentOS
 
 ```
 yum-config-manager --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.repo
@@ -34,10 +34,9 @@ conda install -c conda-forge jemalloc
 
 ```
 
-### Install in Ubuntu
+### System-level optimization on Ubuntu
 
 ```
-
 sudo apt-get install -y libjemalloc-dev
 export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libjemalloc.so
 export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms: 60000,muzzy_decay_ms:60000"
@@ -45,5 +44,4 @@ export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:aut
 sudo apt-get install intel-mkl
 export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libiomp5.so
 export OMP_NUM_THREADS=32
-
 ```
